@@ -1,6 +1,5 @@
 ﻿using System;
 
-
 namespace LibrarySystem
 {
     internal class LibraryService
@@ -14,6 +13,10 @@ namespace LibrarySystem
                     Console.WriteLine("Невірно вказано книгу або користувача.");
                     return;
                 }
+
+                // Перевіряємо, чи предмет можна взяти додому
+                if (item is not ICanBeTakenHome)
+                    throw new ItemUnavailableException($"'{item.Title}' не можна видати додому.");
 
                 if (item.IsLent)
                     throw new ItemUnavailableException($"'{item.Title}' вже видана іншому читачу.");

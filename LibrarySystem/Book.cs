@@ -1,9 +1,8 @@
 ﻿using System;
 
-
 namespace LibrarySystem
 {
-    internal class Book : LibraryItem
+    internal class Book : LibraryItem, ICanBeTakenHome
     {
         public string Author { get; private set; }
 
