@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Text;
 using System.Collections.Generic;
 
 namespace LibrarySystem
@@ -8,62 +7,51 @@ namespace LibrarySystem
     {
         static void Main(string[] args)
         {
-            Console.OutputEncoding = Encoding.UTF8;
-            Console.InputEncoding = Encoding.UTF8;
+           
+                Console.OutputEncoding = System.Text.Encoding.UTF8;
+                Console.InputEncoding = System.Text.Encoding.UTF8;
 
-            var service = new LibraryService();
+                var pLend = new Permission("LEND_BOOK");
+            var pReturn = new Permission("RETURN_BOOK");
+            var pAdd = new Permission("ADD_NEW_BOOK");
 
-            var user1 = new User("Ірина");
-            var user2 = new User("Олександр");
+            var readerRole = new Role("Reader", new List<Permission> { pLend, pReturn });
+            var librarianRole = new Role("Librarian", new List<Permission> { pLend, pReturn });
+            var adminRole = new Role("Administrator", new List<Permission> { pAdd });
 
-            // Оригінальні об'єкти
-            var book = new Book("Місто", "Валер'ян Підмогильний");
-            var journal = new Journal("Пізнайко", 5);
+            var userReader = new UserRBAC("Катя", new List<Role> { readerRole });
+            var userLibrarian = new UserRBAC("Марія", new List<Role> { librarianRole });
+            var userAdmin = new UserRBAC("Антон", new List<Role> { adminRole });
 
-            // Нові (за умовою)
-            var rare = new RareBook("Кобзар (першодрук)", "Обережно: тільки в читальній залі");
-            var computer = new ReadingRoomComputer("ПК №12", "Читальна зала - ряд 2");
+            var originalService = new LibraryServiceRBAC(); // тепер реалізує ILibraryService
+            var authService = new AuthorizationService();
 
-            // Демонстрація DisplayInfo() через базовий тип (LSP)
-            List<LibraryItem> items = new List<LibraryItem> { book, journal, rare, computer };
-            Console.WriteLine("Список предметів у бібліотеці:");
-            foreach (var it in items)
-            {
-                it.DisplayInfo();
-            }
-            Console.WriteLine();
+            Console.WriteLine("\n=== Reader Tests ===");
+            var readerSecure = new SecureLibraryServiceDecorator(originalService, authService, userReader);
 
-            // Видача: показати нормальну видачу і помилки
-            service.LendItem(book, user1);   // має працювати
-            service.LendItem(book, user2);   // зайнята - помилка
+            readerSecure.LendBook("Гаррі Поттер");
+            readerSecure.ReturnBook("Гаррі Поттер");
+            Try(() => readerSecure.AddNewBook("1984", "Оруелл"));
 
-            book.ReturnItem();
-            Console.WriteLine($"'{book.Title}' повернута до бібліотеки.\n");
+            Console.WriteLine("\n=== Librarian Tests ===");
+            var librarianSecure = new SecureLibraryServiceDecorator(originalService, authService, userLibrarian);
 
-            service.LendItem(book, user2);   // тепер працює
+            librarianSecure.LendBook("Місто");
+            librarianSecure.ReturnBook("Місто");
+            Try(() => librarianSecure.AddNewBook("Фраза", "Автор"));
 
-            service.LendItem(journal, user1); // журнал можна видати
+            Console.WriteLine("\n=== Admin Tests ===");
+            var adminSecure = new SecureLibraryServiceDecorator(originalService, authService, userAdmin);
 
-            // Спроби видати те, що не можна
-            service.LendItem(rare, user1);      // має вивести помилку (не можна видати)
-            service.LendItem(computer, user1);  // теж помилка
+            adminSecure.AddNewBook("Чорний Ворон", "Шкляр");
+            Try(() => adminSecure.LendBook("Чорний Ворон"));
+            Try(() => adminSecure.ReturnBook("Чорний Ворон"));
+        }
 
-            // ---- Штрафи (Strategy) ----
-            var fineService = new FineService(new StandardFine(5m));
-            Console.WriteLine("\n--- Розрахунок штрафів: StandardFine ---");
-            fineService.ShowFine(book, 5);      // можна — книга береться додому
-            fineService.ShowFine(journal, 3);   // можна — журнал
-
-            Console.WriteLine("\n--- Розрахунок штрафів: ProgressiveFine ---");
-            fineService.SetStrategy(new ProgressiveFine(3m, 2m));
-            fineService.ShowFine(book, 5);      // різний результат
-
-            // Спроба розрахувати штраф для об'єкта, якого не видають додому
-            Console.WriteLine("\n--- Спроба розрахувати штраф для рідкісної книги та комп'ютера ---");
-            fineService.ShowFine(rare, 4);      // має показати помилку StrategyNotApplicableException
-            fineService.ShowFine(computer, 2);  // також помилка
-
-            Console.WriteLine("\nРоботу сервісу завершено.");
+        static void Try(Action action)
+        {
+            try { action(); }
+            catch (Exception ex) { Console.WriteLine($"[Помилка] {ex.Message}"); }
         }
     }
 }
