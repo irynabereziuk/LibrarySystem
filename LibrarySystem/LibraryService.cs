@@ -14,14 +14,13 @@ namespace LibrarySystem
                     return;
                 }
 
-                // Перевіряємо, чи предмет можна взяти додому
+                
                 if (item is not ICanBeTakenHome)
                     throw new ItemUnavailableException($"'{item.Title}' не можна видати додому.");
 
-                if (item.IsLent)
-                    throw new ItemUnavailableException($"'{item.Title}' вже видана іншому читачу.");
-
+               
                 item.Lend();
+
                 Console.WriteLine($"{user.Name} успішно отримав(ла) '{item.Title}'.");
             }
             catch (ItemUnavailableException ex)
